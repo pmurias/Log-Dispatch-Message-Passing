@@ -4,6 +4,8 @@ use base qw(Log::Dispatch::Output);
 use warnings;
 use strict;
 use Scalar::Util qw/ blessed /;
+use Params::Validate qw(validate SCALAR);
+Params::Validate::validation_options( allow_extra => 1 );
 use Carp qw/ confess /;
 
 our $VERSION = '0.005';
@@ -23,6 +25,25 @@ sub new {
   $self->_basic_init(%arg);
 
   return $self;
+}
+
+# copy & pasted & modified to accept more things
+sub log {
+    my $self = shift;
+    
+    my %p = validate(
+        @_, {
+            level   => { type => SCALAR },
+            # we don't validate message here
+        }
+    );
+
+    return unless $self->_should_log( $p{level} );
+
+    $p{message} = $self->_apply_callbacks(%p)
+        if $self->{callbacks};
+
+    $self->log_message(%p);
 }
 
 sub log_message {
